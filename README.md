@@ -1,6 +1,6 @@
 # docOnline
 edit docx template online html  
-now support contect input and table input  
+now support content input and table input  
 template input must be empty underlined, table first row must colum names
 
 
