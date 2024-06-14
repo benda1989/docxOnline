@@ -29,7 +29,7 @@ jss = '''
             });
             document.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter') {
-                    if (e.target.tagName === "INPUT") {
+                    if (e.target.tagName === "INPUT" && e.target.className === "pydocx-underline") {
                         nextInput(e.target)
                     }
                 }
@@ -298,9 +298,9 @@ if __name__ == "__main__":
     html = docs.export()
     with open("res.html", "w", encoding="utf-8") as f:
         f.write(html)
-    docs.save("", ["替换数据" for i in range(30)], [
-        [["1", "2", "3\n5", "4", "5"] for i in range(6)]
-    ]
-    )
+    # docs.save("", ["替换数据" for i in range(30)], [
+    #     [["1", "2", "3\n5", "4", "5"] for i in range(6)]
+    # ]
+    # )
     print(docs.colums)
     print(docs.inputDatas)
