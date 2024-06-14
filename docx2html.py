@@ -47,21 +47,23 @@ jss = '''
                             inputs[i].value = datas[i].value
                         }
                     }
-                    let tbodys = document.getElementsByTagName("tbody");
-                    if (tables.length === tbodys.length) {
-                        for (let i = 0; i < tables.length; i++) {
-                            let rcount = tbodys[i].childElementCount;
-                            for (let j = 0; j < tables[i].length; j++) {
-                                if (j < rcount) {
-                                    for (let k = 0; k < tables[i][j].length; k++) {
-                                        tbodys[i].children[j].cells[k].innerHTML = tables[i][j][k]
-                                    }
-                                } else {
-                                    let row = tbodys[i].insertRow();
-                                    for (let k = 0; k < tables[i][j].length; k++) {
-                                        let cell = row.insertCell(k);
-                                        cell.textContent = tables[i][j][k]
-                                        makeEditable(cell);
+                    if (typeof(exp) != "undefined"){
+                        let tbodys = document.getElementsByTagName("tbody");
+                        if (tables.length === tbodys.length) {
+                            for (let i = 0; i < tables.length; i++) {
+                                let rcount = tbodys[i].childElementCount;
+                                for (let j = 0; j < tables[i].length; j++) {
+                                    if (j < rcount) {
+                                        for (let k = 0; k < tables[i][j].length; k++) {
+                                            tbodys[i].children[j].cells[k].innerHTML = tables[i][j][k]
+                                        }
+                                    } else {
+                                        let row = tbodys[i].insertRow();
+                                        for (let k = 0; k < tables[i][j].length; k++) {
+                                            let cell = row.insertCell(k);
+                                            cell.textContent = tables[i][j][k]
+                                            makeEditable(cell);
+                                        }
                                     }
                                 }
                             }
@@ -285,3 +287,16 @@ class docx2html(PyDocXHTMLExporter):
                         cell.text = table[j-1][k]
         doc.save(paths)
         return paths
+
+
+if __name__ == "__main__":
+    docs = docx2html('用户协议.docx')
+    html = docs.export()
+    with open("res.html", "w", encoding="utf-8") as f:
+        f.write(html)
+    docs.save("", ["替换数据" for i in range(30)], [
+        [["1", "2", "3\n5", "4", "5"] for i in range(6)]
+    ]
+    )
+    print(docs.colums)
+    print([i.detail for i in docs.inputDatas])
