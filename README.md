@@ -10,6 +10,7 @@ template input must be empty underlined, table first row must colum names
 - `python app.py` or other method develop flask app
 
 # Router
+- get /
 - post /upload   
 ``` 
 request:

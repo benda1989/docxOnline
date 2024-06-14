@@ -273,9 +273,10 @@ class docx2html(PyDocXHTMLExporter):
         doc, i = Document(self.path), 0
         for para in doc.paragraphs:
             for run in para.runs:
-                if run.underline:
+                if i >= len(datas) and run.underline:
                     run.text = datas[i]
                     i += 1
+
         for i, table in enumerate(tables):
             rn = len(table.rows)-1  # 第一行标题
             while rn < len(table):

@@ -12,6 +12,10 @@ app.config['HTML_FOLDER'] = 'htmls/'
 app.config['DOCX_FOLDER'] = 'results/'
 app.config['ALLOWED_EXTENSIONS'] = {'docx'}
 
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(app.config['HTML_FOLDER'], exist_ok=True)
+os.makedirs(app.config['DOCX_FOLDER'], exist_ok=True)
+
 
 def get_db():
     db = getattr(g, '_database', None)
@@ -64,6 +68,11 @@ def close_connection(exception):
         db.close()
 
 
+@app.route('/')
+def index():
+    return Response(open("index.html").read(), mimetype='text/html')
+
+
 @app.route('/html/<id>', methods=['GET'])
 def html(id):
     return Response(open(app.config['HTML_FOLDER'] + id).read(), mimetype='text/html')
@@ -80,9 +89,9 @@ def create_docx(id):
         if request.method == "POST":
             data = request.get_json()
             print(data)
-            if "datas" not in data:
-                return jsonify({'msg': 'should has datas'})
-            docx2html(app.config['UPLOAD_FOLDER'] + one[1]).save(fp, data.get("datas"), data.get("table", []))
+            if not data or "inputs" not in data:
+                return jsonify({'msg': 'should has inputs'})
+            docx2html(app.config['UPLOAD_FOLDER'] + one[1]).save(fp, data.get("inputs"), data.get("table", []))
             save_db("update  datas set docx=true where md5 =?", (id,))
         return send_file(fp, as_attachment=True)
     else:

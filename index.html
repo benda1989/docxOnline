@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>DocxTemplateOnline</title>
+    <style>
+        button {
+            position: fixed;
+            top: 20%;
+            left: 5%;
+            background-color: #007BFF;
+            color: white;
+            padding: 2%;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        #dropZone,
+        #fileInput {
+            margin: 10%;
+            padding: 10%;
+            border: 2px dashed #ccc;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        iframe {
+            margin-left: auto;
+            margin-right: auto;
+            width: 1240px;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="text-align: center;">
+        <div id="dropZone">点击或拖拽文件到这里</div>
+        <input type="file" id="fileInput" style="display: none;">
+        <button id="button" style="display: none;">保存</button>
+    </div>
+    <iframe id="myIframe" src="" style="display:none;"></iframe>
+    <script>
+        var id = "";
+        var inputs = [];
+        var tables = [];
+        var dropZone = document.getElementById('dropZone');
+        var fileInput = document.getElementById('fileInput');
+        var openButton = document.getElementById('button');
+        var iframe = document.getElementById('myIframe');
+
+        dropZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+        dropZone.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'copy';
+        });
+        dropZone.addEventListener('drop', (event) => {
+            event.preventDefault();
+            handleFiles(event.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (event) => {
+            const files = event.target.files;
+            handleFiles(files);
+        });
+
+
+        window.addEventListener('message', function (e) {
+            console.log(e.data)
+            tables = e.data.tables;
+            for (let i = 0; i < e.data.inputs.length; i++) {
+                inputs[i].value = e.data.inputs[i]
+            }
+            let xhr = new XMLHttpRequest();
+            xhr.open('POST', '/docx/' + id);
+            xhr.setRequestHeader('content-type', 'application/json');
+            xhr.responseType = 'blob';
+            xhr.onreadystatechange = function () {
+                if (xhr.status === 200 && xhr.readyState == 4) {
+                    const fileReader = new FileReader();
+                    fileReader.readAsDataURL(this.response);
+                    fileReader.onload = function () {
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = this.result;
+                        a.download = name;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    }
+                }
+            }
+            xhr.send(JSON.stringify(e.data));
+            openButton.textContent = "保存";
+        }, false);
+
+        openButton.addEventListener('click', function () {
+            iframe.contentWindow.postMessage('save', '*');
+            openButton.textContent = "保存中";
+            // if (iframe.style.display == 'block') {
+            //     iframe.style.display = 'none'
+            //     openButton.textContent = "打开";
+            // } else {
+            //     iframe.style.display = 'block'
+            //     openButton.textContent = "保存";
+            // }
+        });
+
+        function handleFiles(files) {
+            if (files.length <= 0) { return }
+            let formData = new FormData();
+            formData.append('file', files[0]);
+            let xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.status === 200 && xhr.readyState == 4) {
+                    let res = JSON.parse(xhr.responseText);
+                    console.log(res);
+                    dropZone.style.display = 'none';
+                    openButton.style.display = 'block';
+                    iframe.style.display = 'block'
+                    iframe.src = 'html/' + res.id;
+                    tables = res.tables;
+                    id = res.id;
+                    inputs = [];
+                    for (let i = 0; i < res.datas.length; i++) {
+                        inputs.push({ value: res.datas[i], type: "text" })
+                    };
+                    iframe.onload = function () {
+                        iframe.contentWindow.postMessage({ inputs, tables }, '*');
+                    };
+                }
+            };
+            xhr.open('POST', '/upload');
+            xhr.send(formData);
+        };
+    </script>
+</body>
+
+</html>
