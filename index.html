@@ -76,7 +76,7 @@
                 inputs[i].value = e.data.inputs[i]
             }
             let xhr = new XMLHttpRequest();
-            xhr.open('POST', '/docx/' + id);
+            xhr.open('POST', '/docx/' + id, true);
             xhr.setRequestHeader('content-type', 'application/json');
             xhr.responseType = 'blob';
             xhr.onreadystatechange = function () {
@@ -87,7 +87,7 @@
                         const a = document.createElement('a');
                         a.style.display = 'none';
                         a.href = this.result;
-                        a.download = name;
+                        a.download = "download.docx";
                         document.body.appendChild(a);
                         a.click();
                         document.body.removeChild(a);

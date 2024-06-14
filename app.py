@@ -25,18 +25,19 @@ def get_db():
 
 
 def init_db():
-    with app.app_context():
-        db = get_db()
-        db.cursor().executescript('''CREATE TABLE IF NOT EXISTS datas(
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            name TEXT NOT NULL,
-                            md5 TEXT NOT NULL,
-                            datas TEXT NOT NULL,
-                            docx  bool default false,
-                            createdAt timestamp default (datetime('now','localtime'))
-                            );
-                            CREATE INDEX md5_index ON datas(md5);''')
-        db.commit()
+    if not os.path.exists("db"):
+        with app.app_context():
+            db = get_db()
+            db.cursor().executescript('''CREATE TABLE IF NOT EXISTS datas(
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                name TEXT NOT NULL,
+                                md5 TEXT NOT NULL,
+                                datas TEXT NOT NULL,
+                                docx  bool default false,
+                                createdAt timestamp default (datetime('now','localtime'))
+                                );
+                                CREATE INDEX md5_index ON datas(md5);''')
+            db.commit()
 
 
 def save_db(sql, args=()):
@@ -51,6 +52,12 @@ def query_db(query, args=(), one=False):
     rv = cur.fetchall()
     cur.close()
     return (rv[0] if rv else None) if one else rv
+
+
+def fileMd5(f):
+    with open(f, "rb") as fs:
+        md5 = hashlib.md5(fs.read()).hexdigest()
+    return md5
 
 
 def getOne(md5):
@@ -68,51 +75,71 @@ def close_connection(exception):
         db.close()
 
 
-@app.route('/')
+@app.route('/', methods=["GET", 'POST'])
 def index():
-    return Response(open("index.html").read(), mimetype='text/html')
+    if request.method == "POST":
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'should has data'})
+        fp = data.get("path")
+        if not fp:
+            return jsonify({'error': 'should has path'})
+        docs = docx2html(fp)
+        md5 = fileMd5(fp)
+        data = data.get("data")
+        if data:
+            if "inputs" not in data:
+                return jsonify({'error': 'should has inputs'})
+            fp = app.config['DOCX_FOLDER']+md5
+            docs.save(fp, data.get("inputs"), data.get("table", []))
+        else:
+            fp = app.config['HTML_FOLDER']+md5+".html"
+            with open(fp, "w", encoding="utf-8") as f:
+                f.write(docs.export())
+        return send_file(fp, as_attachment=True)
+    else:
+        return Response(open("index.html").read(), mimetype='text/html')
 
 
-@app.route('/html/<id>', methods=['GET'])
+@ app.route('/html/<id>', methods=['GET'])
 def html(id):
     return Response(open(app.config['HTML_FOLDER'] + id).read(), mimetype='text/html')
 
 
-@app.route('/docx/<id>', methods=["GET", 'POST'])
+@ app.route('/docx/<id>', methods=["GET", 'POST'])
 def create_docx(id):
-
     one = getOne(id)
     if one:
         fp = app.config['DOCX_FOLDER'] + id + ".docx"
         if request.method == "GET" and not one[4]:
-            return jsonify({'msg': 'No file data'})
+            return jsonify({'error': 'No file data'})
         if request.method == "POST":
             data = request.get_json()
             print(data)
             if not data or "inputs" not in data:
-                return jsonify({'msg': 'should has inputs'})
+                return jsonify({'error': 'should has inputs'})
+            save_db("update  datas set docx=1 where md5 = "+id)
             docx2html(app.config['UPLOAD_FOLDER'] + one[1]).save(fp, data.get("inputs"), data.get("table", []))
-            save_db("update  datas set docx=true where md5 =?", (id,))
+
         return send_file(fp, as_attachment=True)
     else:
-        return jsonify({'msg': 'No such file'})
+        return jsonify({'error': 'No such file'})
 
 
-@app.route('/upload', methods=['POST'])
+@ app.route('/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
-        return jsonify({'msg': 'No file part'})
+        return jsonify({'error': 'No file part'})
     file = request.files['file']
     if file.filename == '':
-        return jsonify({'msg': 'No selected file'})
+        return jsonify({'error': 'No selected file'})
     if file and allowed_file(file.filename):
         fn = str(time.time())+file.filename
         fp = app.config['UPLOAD_FOLDER']+fn
         md5, datas = "", []
         with open(fp, "wb") as fs:
             file.save(fs)
-        with open(fp, "rb") as fs:
-            md5 = hashlib.md5(fs.read()).hexdigest()
+        md5 = fileMd5(fp)
         one = getOne(md5)
         if not one:
             docs = docx2html(fp)
@@ -126,9 +153,9 @@ def upload_file():
         return jsonify({'id': md5,
                         "datas": datas})
     else:
-        return jsonify({'msg': 'File type not allowed'})
+        return jsonify({'error': 'File type not allowed'})
 
 
 if __name__ == "__main__":
-    # init_db()
-    app.run()
+    init_db()
+    app.run(host="0.0.0.0")

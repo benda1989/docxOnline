@@ -1,3 +1,4 @@
+# encoding:utf-8
 # pip install pydocx python-docx
 import time
 import itertools
@@ -135,7 +136,7 @@ class item():
     date = None
     table = None
 
-    def __init__(self, detail="") -> None:
+    def __init__(self, detail=""):
         self.detail = detail
 
 
@@ -273,12 +274,14 @@ class docx2html(PyDocXHTMLExporter):
         doc, i = Document(self.path), 0
         for para in doc.paragraphs:
             for run in para.runs:
-                if i >= len(datas) and run.underline:
+                if i >= len(datas):
+                    continue
+                if run.underline:
                     run.text = datas[i]
                     i += 1
 
         for i, table in enumerate(tables):
-            rn = len(table.rows)-1  # 第一行标题
+            rn = len(doc.tables[i].rows)-1  # 第一行标题
             while rn < len(table):
                 doc.tables[i].add_row()
                 rn += 1
@@ -300,4 +303,4 @@ if __name__ == "__main__":
     ]
     )
     print(docs.colums)
-    print([i.detail for i in docs.inputDatas])
+    print(docs.inputDatas)
