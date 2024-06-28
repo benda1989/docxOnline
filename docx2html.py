@@ -6,7 +6,12 @@ from PIL import Image
 from docx import Document
 from pydocx.export.html import PyDocXHTMLExporter, HtmlTag
 from itertools import chain
-
+from pydocx.constants import PYDOCX_STYLES
+PYDOCX_STYLES["underline"] = {
+    'border': 'none',
+    'outline': 'none',
+    'border-bottom': '1px solid #050505',
+}
 
 jss = '''
         document.addEventListener('DOMContentLoaded', function () {
@@ -228,34 +233,35 @@ class docx2html(PyDocXHTMLExporter):
 
     # 图片缩放
     def get_image_tag(self, image, width=None, height=None, rotate=None):
-        attrs = {
-            'width': width,
-            'height': height
-        }
-        c = rotate and rotate in (270, 90)
-        ic = Image.open(image.stream)
-        if (ic.width <= 595 and not c) or (ic.height <= 842 and c):
-            image_src = self.get_image_source(image)
-            if rotate:
-                attrs['style'] = 'transform: rotate(%sdeg);' % rotate
-        else:
-            import base64
-            from io import BytesIO
-            if c:
-                ic = ic.rotate(360-rotate, expand=True)
-                attrs["width"], attrs["height"] = height, width
-            ic = ic.resize((842, int(ic.height * 842 / ic.width)))
-            buffer = BytesIO()
-            ic.save(buffer, format="JPEG")
-            image_src = 'data:image/JPEG;base64,{data}'.format(data=base64.b64encode(buffer.getvalue()).decode('utf-8'))
-        if image_src:
-            return HtmlTag(
-                'img',
-                allow_self_closing=True,
-                allow_whitespace=True,
-                src=image_src,
-                **attrs
-            )
+        if not self.first_pass:
+            attrs = {
+                'width': width,
+                'height': height
+            }
+            c = rotate and rotate in (270, 90)
+            ic = Image.open(image.stream)
+            if (ic.width <= 595 and not c) or (ic.height <= 842 and c):
+                image_src = self.get_image_source(image)
+                if rotate:
+                    attrs['style'] = 'transform: rotate(%sdeg);' % rotate
+            else:
+                import base64
+                from io import BytesIO
+                if c:
+                    ic = ic.rotate(360-rotate, expand=True)
+                    attrs["width"], attrs["height"] = height, width
+                ic = ic.resize((842, int(ic.height * 842 / ic.width)))
+                buffer = BytesIO()
+                ic.save(buffer, format="JPEG")
+                image_src = 'data:image/JPEG;base64,{data}'.format(data=base64.b64encode(buffer.getvalue()).decode('utf-8'))
+            if image_src:
+                return HtmlTag(
+                    'img',
+                    allow_self_closing=True,
+                    allow_whitespace=True,
+                    src=image_src,
+                    **attrs
+                )
 
     # 导出html
     def export(self):
@@ -296,6 +302,7 @@ class docx2html(PyDocXHTMLExporter):
 if __name__ == "__main__":
     docs = docx2html('用户协议.docx')
     html = docs.export()
+    re = docs.main_document_part.document
     with open("res.html", "w", encoding="utf-8") as f:
         f.write(html)
     # docs.save("", ["替换数据" for i in range(30)], [
